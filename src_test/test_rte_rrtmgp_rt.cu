@@ -644,26 +644,37 @@ void solve_radiation(int argc, char** argv)
         Array<Float,1> azi(input_nc.get_variable<Float>("azi", {n_col_y, n_col_x}), {n_col});
         Array<Float,2> sfc_alb_dir(input_nc.get_variable<Float>("sfc_alb_dir", {n_col_y, n_col_x, n_bnd_sw}), {n_bnd_sw, n_col});
         Array<Float,2> sfc_alb_dif(input_nc.get_variable<Float>("sfc_alb_dif", {n_col_y, n_col_x, n_bnd_sw}), {n_bnd_sw, n_col});
+        
+        for (int icol=1; icol<=n_col; ++icol) 
+        {
+            for (int i_bnd=1; i_bnd<=n_bnd_sw; ++i_bnd) 
+            {
+                sfc_alb_dir({i_bnd, icol}) = Float(0.);
+                sfc_alb_dif({i_bnd, icol}) = Float(0.);
+            }
+        }
 
         Array<Float,1> tsi_scaling({n_col});
-        if (input_nc.variable_exists("tsi"))
-        {
-            Array<Float,1> tsi(input_nc.get_variable<Float>("tsi", {n_col_y, n_col_x}), {n_col});
-            const Float tsi_ref = rad_sw.get_tsi_gpu();
-            for (int icol=1; icol<=n_col; ++icol)
-                tsi_scaling({icol}) = tsi({icol}) / tsi_ref;
-        }
-        else if (input_nc.variable_exists("tsi_scaling"))
-        {
-            Float tsi_scaling_in = input_nc.get_variable<Float>("tsi_scaling");
-            for (int icol=1; icol<=n_col; ++icol)
-                tsi_scaling({icol}) = tsi_scaling_in;
-        }
-        else
-        {
-            for (int icol=1; icol<=n_col; ++icol)
-                tsi_scaling({icol}) = Float(1.);
-        }
+        // if (input_nc.variable_exists("tsi"))
+        // {
+        //     Array<Float,1> tsi(input_nc.get_variable<Float>("tsi", {n_col_y, n_col_x}), {n_col});
+        //     const Float tsi_ref = rad_sw.get_tsi_gpu();
+        //     for (int icol=1; icol<=n_col; ++icol)
+        //         tsi_scaling({icol}) = tsi({icol}) / tsi_ref;
+        // }
+        // else if (input_nc.variable_exists("tsi_scaling"))
+        // {
+        //     Float tsi_scaling_in = input_nc.get_variable<Float>("tsi_scaling");
+        //     for (int icol=1; icol<=n_col; ++icol)
+        //         tsi_scaling({icol}) = tsi_scaling_in;
+        // }
+        // else
+        // {
+        //     for (int icol=1; icol<=n_col; ++icol)
+        //         tsi_scaling({icol}) = Float(1.);
+        // }
+        for (int icol=1; icol<=n_col; ++icol)
+            tsi_scaling({icol}) = Float(1.);
 
         // Create output arrays.
         Array_gpu<Float,2> sw_tot_tau;
@@ -763,7 +774,6 @@ void solve_radiation(int argc, char** argv)
             cudaEventCreate(&stop);
 
             cudaEventRecord(start, 0);
-
             rad_sw.solve_gpu(
                     switch_fluxes,
                     switch_raytracing,

@@ -56,9 +56,9 @@ namespace
                 const Float taussag_local = taussa_local *
                                      (asy_table[idx_ib] + fint * (asy_table[idx_ib+1] - asy_table[idx_ib]));
 
-                tau[idx]     = tau_local;
-                taussa[idx]  = taussa_local;
-                taussag[idx] = taussag_local;
+                tau[idx]     = Float(1.5)*(cwp[idx]/re[idx]);
+                taussa[idx]  = Float(0.);
+                taussag[idx] = Float(0.);
             }
             else
             {
@@ -104,8 +104,8 @@ namespace
             const Float taussag = ltaussag[idx] + itaussag[idx];
 
             tau[idx] = tau_t;
-            ssa[idx] = taussa / max(tau_t, tmin);
-            g[idx]   = taussag/ max(taussa, tmin);
+            ssa[idx] = 0.9999; //taussa / max(tau_t, tmin);
+            g[idx]   = 0.85; // taussag/ max(taussa, tmin);
         }
     }
 
@@ -314,7 +314,6 @@ void Cloud_optics_rt::cloud_optics(
             this->lut_asyice_gpu.ptr(), itau.ptr(), itaussa.ptr(), itaussag.ptr());
 
     constexpr Float eps = std::numeric_limits<Float>::epsilon();
-
     combine_and_store_kernel<<<grid_gpu, block_gpu>>>(
             ncol, nlay, eps,
             optical_props.get_tau().ptr(),

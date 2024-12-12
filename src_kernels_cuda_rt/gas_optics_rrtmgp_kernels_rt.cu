@@ -526,7 +526,7 @@ void combine_abs_and_rayleigh_kernel(
 
         const Float tau_tot = tau_abs[idx] + tau_rayleigh[idx];
 
-        tau[idx_out] = tau_tot;
+        tau[idx_out] = std::pow(10.0f, -12); // tau_tot;
         g  [idx_out] = Float(0.);
 
         if (tau_tot>(Float(2.)*tmin))
