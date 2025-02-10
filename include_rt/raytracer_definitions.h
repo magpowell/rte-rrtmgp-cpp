@@ -30,6 +30,7 @@ namespace Raytracer_definitions
     {
         Vector<Float>position;
         Vector<Float>direction;
+        Vector<Float>direction_hold;
         Photon_kind kind;
         Photon_cloud_status cloud_status;
     };

@@ -94,6 +94,7 @@ namespace
                 photon.kind = Photon_kind::Diffuse;
                 photon.cloud_status = Photon_cloud_status::no_cld;
             }
+            photon.direction_hold = photon.direction;
 
             const int ij = i + j*grid_cells.x;
 
@@ -272,6 +273,7 @@ void ray_tracer_kernel(
                     photon.direction.x = mu_surface*sin(azimuth_surface);
                     photon.direction.y = mu_surface*cos(azimuth_surface);
                     photon.direction.z = sqrt(Float(1.) - mu_surface*mu_surface + Float_epsilon);
+                    photon.direction_hold = photon.direction;
                     photon.kind = Photon_kind::Diffuse;
                 }
                 else
@@ -446,6 +448,27 @@ void ray_tracer_kernel(
                         photon.direction = cos_scat*photon.direction
                             + sin_scat*(sin(phi)*t1 + cos(phi)*t2);
                     } else {
+
+                        if (fabs(photon.direction_hold.x) < fabs(photon.direction_hold.y))
+                        {
+                            if (fabs(photon.direction_hold.x) < fabs(photon.direction_hold.z))
+                                t1.x = Float(1.);
+                            else
+                                t1.z = Float(1.);
+                        }
+                        else
+                        {
+                            if (fabs(photon.direction_hold.y) < fabs(photon.direction_hold.z))
+                                t1.y = Float(1.);
+                            else
+                                t1.z = Float(1.);
+                        }
+                        t1 = normalize(t1 - photon.direction_hold*dot(t1, photon.direction_hold));
+                        t2 = cross(photon.direction_hold, t1);
+
+                        photon.direction_hold = cos_scat*photon.direction_hold
+                            + sin_scat*(sin(phi)*t1 + cos(phi)*t2);
+
                         photon.direction.z = cos_scat*photon.direction.z
                             + sin_scat*(sin(phi)*t1.z + cos(phi)*t2.z);
                     } 
