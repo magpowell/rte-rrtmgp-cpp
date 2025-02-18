@@ -318,7 +318,7 @@ void tilt_input(int argc, char** argv)
     Status::print_message("###### Starting Tilting ######");
     auto time_start = std::chrono::high_resolution_clock::now();
     
-    tilted_path_dda(xh.v(),yh.v(),zh.v(),z.v(),sza,azi,path.v(),zh_tilt.v());
+    tilted_path(xh.v(),yh.v(),zh.v(),z.v(),sza,azi,path.v(),zh_tilt.v());
 
     n_lev_tilt = zh_tilt.v().size();
     n_lay_tilt = n_lev_tilt - 1;
