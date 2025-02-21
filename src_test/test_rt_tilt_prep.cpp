@@ -276,12 +276,10 @@ bool prepare_netcdf(Netcdf_handle& input_nc, std::string file_name, int n_lay_ti
         std::string var_name = "vmr_" + gas_name;
         if (gas.size() == 1) {
             auto nc_gas = output_nc.add_variable<Float>(var_name);
-            // nc_gas.insert(gas.v(), {}); // TODO DONT FORGET TO TURN THIS BACK ON
-            nc_gas.insert(0, {});
+            nc_gas.insert(gas.v(), {}); 
         } else {
             auto nc_gas = output_nc.add_variable<Float>(var_name, {"lay", "y", "x"});
-            // const std::vector<Float>& flat_data = gas.v(); // TODO DONT FORGET TO TURN THIS BACK ON
-            std::vector<Float> flat_data(gas.size(), 0.0);
+            const std::vector<Float>& flat_data = gas.v();
             nc_gas.insert(flat_data, {0, 0, 0});
         }
     }
