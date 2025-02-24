@@ -458,12 +458,12 @@ void tilt_input(int argc, char** argv)
         }
     }
 
-    std::array<std::pair<Float, Float>, 5> x_y_start_arr;
+    std::array<std::pair<Float, Float>, 1> x_y_start_arr;
     x_y_start_arr[0] = std::make_pair(.5, .5);
-    x_y_start_arr[1] = std::make_pair(0, 0);
-    x_y_start_arr[2] = std::make_pair(0, 1);
-    x_y_start_arr[3] = std::make_pair(1, 1);
-    x_y_start_arr[4] = std::make_pair(1, 0);
+    // x_y_start_arr[1] = std::make_pair(0.1, 0.1);
+    // x_y_start_arr[2] = std::make_pair(0.1, 0.9);
+    // x_y_start_arr[3] = std::make_pair(0.9, 0.1);
+    // x_y_start_arr[4] = std::make_pair(0.9, 0.9);
     
     std::string file_name;
     Float x_start;
