@@ -338,9 +338,18 @@ void Raytracer::trace_rays(
     const Vector<Float> grid_size = grid_d * grid_cells;
 
     // direction of direct rays. Take into account that azimuth is 0 north and increases clockwise
-    const Vector<Float> sun_direction = {-std::sin(zenith_angle) * std::cos(Float(0.5*M_PI) - azimuth_angle),
-                                         -std::sin(zenith_angle) * std::sin(Float(0.5*M_PI) - azimuth_angle),
-                                         -std::cos(zenith_angle)};
+    Vector<Float> sun_direction_init;
+    if (switch_tica) {
+        sun_direction_init = {0, 0, -1};
+
+    } else {
+        sun_direction_init = {-std::sin(zenith_angle) * std::cos(Float(0.5*M_PI) - azimuth_angle),
+                                        -std::sin(zenith_angle) * std::sin(Float(0.5*M_PI) - azimuth_angle),
+                                        -std::cos(zenith_angle)};
+
+    }
+    const Vector<Float> sun_direction = sun_direction_init;
+
 
     // smallest two power that is larger than grid dimension (minimum of 2 is currently required)
     const Int qrng_grid_x = std::max(Float(2), pow(Float(2.), ceil(std::log2(Float(grid_cells.x)))) );
@@ -379,7 +388,6 @@ void Raytracer::trace_rays(
     const int qrng_gpt_offset = (igpt-1) * rt_kernel_grid_size * rt_kernel_block_size * photons_per_thread;
     ray_tracer_kernel<<<grid, block,sizeof(Float)*mie_table_size>>>(
             switch_independent_column,
-            switch_tica,
             photons_per_thread,
             qrng_grid_x,
             qrng_grid_y,

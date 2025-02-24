@@ -24,15 +24,12 @@ namespace Raytracer_definitions
     };
 
     enum class Photon_kind { Direct, Diffuse };
-    enum class Photon_cloud_status { no_cld, cld };
 
     struct Photon
     {
         Vector<Float>position;
         Vector<Float>direction;
-        Vector<Float>direction_hold;
         Photon_kind kind;
-        Photon_cloud_status cloud_status;
     };
 }
 #endif

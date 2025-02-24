@@ -81,7 +81,6 @@ namespace
             {
                 photon.direction = sun_direction;
                 photon.kind = Photon_kind::Direct;
-                photon.cloud_status = Photon_cloud_status::no_cld;
             }
             else
             {
@@ -92,9 +91,7 @@ namespace
                 photon.direction.y = mu_surface*cos(azimuth_surface);
                 photon.direction.z = Float(-1) * (sqrt(Float(1.) - mu_surface*mu_surface + Float_epsilon));
                 photon.kind = Photon_kind::Diffuse;
-                photon.cloud_status = Photon_cloud_status::no_cld;
             }
-            photon.direction_hold = photon.direction;
 
             const int ij = i + j*grid_cells.x;
 
@@ -123,7 +120,6 @@ namespace
 __global__
 void ray_tracer_kernel(
         const Bool independent_column,
-        const Bool tica,
         const Int photons_to_shoot,
         const Int qrng_grid_x,
         const Int qrng_grid_y,
@@ -273,7 +269,6 @@ void ray_tracer_kernel(
                     photon.direction.x = mu_surface*sin(azimuth_surface);
                     photon.direction.y = mu_surface*cos(azimuth_surface);
                     photon.direction.z = sqrt(Float(1.) - mu_surface*mu_surface + Float_epsilon);
-                    photon.direction_hold = photon.direction;
                     photon.kind = Photon_kind::Diffuse;
                 }
                 else
@@ -438,41 +433,7 @@ void ray_tracer_kernel(
 
                     const Float phi = Float(2.*M_PI)*rng();
 
-                    if (scatter_type == 1) 
-                    {
-                        photon.cloud_status = Photon_cloud_status::cld;
-                    }
-
-                    if (!tica || photon.cloud_status == Photon_cloud_status::no_cld)
-                    {
-                        photon.direction = cos_scat*photon.direction
-                            + sin_scat*(sin(phi)*t1 + cos(phi)*t2);
-                    } else {
-
-                        if (fabs(photon.direction_hold.x) < fabs(photon.direction_hold.y))
-                        {
-                            if (fabs(photon.direction_hold.x) < fabs(photon.direction_hold.z))
-                                t1.x = Float(1.);
-                            else
-                                t1.z = Float(1.);
-                        }
-                        else
-                        {
-                            if (fabs(photon.direction_hold.y) < fabs(photon.direction_hold.z))
-                                t1.y = Float(1.);
-                            else
-                                t1.z = Float(1.);
-                        }
-                        t1 = normalize(t1 - photon.direction_hold*dot(t1, photon.direction_hold));
-                        t2 = cross(photon.direction_hold, t1);
-
-                        photon.direction_hold = cos_scat*photon.direction_hold
-                            + sin_scat*(sin(phi)*t1 + cos(phi)*t2);
-
-                        photon.direction.z = cos_scat*photon.direction.z
-                            + sin_scat*(sin(phi)*t1.z + cos(phi)*t2.z);
-                    } 
-
+                    photon.direction = cos_scat*photon.direction + sin_scat*(sin(phi)*t1 + cos(phi)*t2);
                     photon.kind = Photon_kind::Diffuse;
                     
                 }
