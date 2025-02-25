@@ -622,10 +622,31 @@ void Radiation_solver_shortwave::solve_gpu(
     cloud_optical_props = std::make_unique<Optical_props_2str_rt>(n_col, n_lay, *cloud_optics_gpu);
     aerosol_optical_props = std::make_unique<Optical_props_2str_rt>(n_col, n_lay, *aerosol_optics_gpu);
 
+    Array_gpu<Float,2> col_dry_test;
     if (col_dry.size() == 0)
     {
         col_dry.set_dims({n_col, n_lay});
         Gas_optics_rrtmgp_rt::get_col_dry(col_dry, gas_concs.get_vmr("h2o"), p_lev);
+    } else
+    {
+        std::cout << "col_dry provided!!" << std::endl;
+        col_dry_test.set_dims({n_col, n_lay});
+        Gas_optics_rrtmgp_rt::get_col_dry(col_dry_test, gas_concs.get_vmr("h2o"), p_lev);
+        
+        Array<Float, 2> col_dry_test_host;
+        col_dry_test_host.set_dims({n_col, n_lay});
+        col_dry_test_host = col_dry_test;
+
+        Array<Float, 2> col_dry_host;
+        col_dry_host.set_dims({n_col, n_lay});
+        col_dry_host = col_dry;
+
+        // Print some values of col_dry and col_dry_test for comparison
+        for (int j = 1; j < col_dry_host.dim(2); ++j) {
+        std::cout << "passed col_dry(" << 1 << ", " << j << ") = " << col_dry_host({1, j}) << ", ";
+        std::cout << "calculated col_dry(" << 1 << ", " << j << ") = " << col_dry_test_host({1, j}) << std::endl;
+        }
+
     }
 
     Array_gpu<Float,1> toa_src({n_col});
