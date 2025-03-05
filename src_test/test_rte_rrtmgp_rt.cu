@@ -238,7 +238,10 @@ void solve_radiation(int argc, char** argv)
         {"single-gpt"        , { false, "Output optical properties and fluxes for a single g-point. '--single-gpt 100': output 100th g-point" }},
         {"profiling"         , { false, "Perform additional profiling run."         }},
         {"delta-cloud"       , { false, "delta-scaling of cloud optical properties"   }},
-        {"delta-aerosol"     , { false, "delta-scaling of aerosol optical properties"   }}};
+        {"delta-aerosol"     , { false, "delta-scaling of aerosol optical properties"   }},
+        {"scale-taus"     , { false,    "1/mu scaling of all optical properties"   }},
+        {"scale-final-tau"     , { false, "1/mu scaling of only final optical properties"   }}
+        };
 
     std::map<std::string, std::pair<int, std::string>> command_line_ints {
         {"raytracing", {32, "Number of rays initialised at TOD per pixel per quadraute."}},
@@ -262,6 +265,8 @@ void solve_radiation(int argc, char** argv)
     const bool switch_profiling         = command_line_switches.at("profiling"         ).first;
     const bool switch_delta_cloud       = command_line_switches.at("delta-cloud"       ).first;
     const bool switch_delta_aerosol     = command_line_switches.at("delta-aerosol"     ).first;
+    const bool switch_scale_optical_props = command_line_switches.at("scale-taus"     ).first;
+    const bool switch_scale_final_optical_props = command_line_switches.at("scale-final-tau"     ).first;
 
     Int photons_per_pixel = Int(command_line_ints.at("raytracing").first);
     if (Float(int(std::log2(Float(photons_per_pixel)))) != std::log2(Float(photons_per_pixel)))
@@ -805,6 +810,8 @@ void solve_radiation(int argc, char** argv)
                     switch_single_gpt,
                     switch_delta_cloud,
                     switch_delta_aerosol,
+                    switch_scale_optical_props,
+                    switch_scale_final_optical_props,
                     single_gpt,
                     photons_per_pixel,
                     grid_cells,
