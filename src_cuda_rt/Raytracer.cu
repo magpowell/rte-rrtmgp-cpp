@@ -169,8 +169,10 @@ namespace
     __global__
     void count_to_flux_2d(
             const Vector<int> grid_cells, const Float photons_per_col, const Float toa_src,
-            const Float* __restrict__ count_1, const Float* __restrict__ count_2, const Float* __restrict__ count_3, const Float* __restrict__ count_4, const Float* __restrict__ count_5,
-            Float* __restrict__ flux_1, Float* __restrict__ flux_2, Float* __restrict__ flux_3, Float* __restrict__ flux_4, Float* __restrict__ flux_5)
+            const Float* __restrict__ count_1, const Float* __restrict__ count_2, const Float* __restrict__ count_3, const Float* __restrict__ count_4, 
+            const Float* __restrict__ count_5, const Float* __restrict__ count_6, const Float* __restrict__ count_7,
+            Float* __restrict__ flux_1, Float* __restrict__ flux_2, Float* __restrict__ flux_3, Float* __restrict__ flux_4, 
+            Float* __restrict__ flux_5, Float* __restrict__ flux_6, Float* __restrict__ flux_7)
     {
         const int icol_x = blockIdx.x*blockDim.x + threadIdx.x;
         const int icol_y = blockIdx.y*blockDim.y + threadIdx.y;
@@ -184,6 +186,8 @@ namespace
             flux_3[idx] = count_3[idx] * flux_per_ray;
             flux_4[idx] = count_4[idx] * flux_per_ray;
             flux_5[idx] = count_5[idx] * flux_per_ray;
+            flux_6[idx] = count_6[idx] * flux_per_ray;
+            flux_7[idx] = count_7[idx] * flux_per_ray;
         }
     }
 
@@ -232,6 +236,7 @@ Raytracer::Raytracer()
 void Raytracer::trace_rays(
         const int igpt,
         const bool switch_independent_column,
+        const bool switch_track_diffuse,
         const Int photons_per_pixel,
         const Vector<int> grid_cells,
         const Vector<Float> grid_d,
@@ -256,6 +261,8 @@ void Raytracer::trace_rays(
         Array_gpu<Float,2>& flux_tod_up,
         Array_gpu<Float,2>& flux_sfc_dir,
         Array_gpu<Float,2>& flux_sfc_dif,
+        Array_gpu<Float,2>& flux_sfc_dif_single,
+        Array_gpu<Float,2>& flux_sfc_dif_multiple,
         Array_gpu<Float,2>& flux_sfc_up,
         Array_gpu<Float,3>& flux_abs_dir,
         Array_gpu<Float,3>& flux_abs_dif)
@@ -321,6 +328,8 @@ void Raytracer::trace_rays(
     Array_gpu<Float,2> tod_up_count({grid_cells.x, grid_cells.y});
     Array_gpu<Float,2> surface_down_direct_count({grid_cells.x, grid_cells.y});
     Array_gpu<Float,2> surface_down_diffuse_count({grid_cells.x, grid_cells.y});
+    Array_gpu<Float,2> surface_down_diffuse_single_count({grid_cells.x, grid_cells.y});
+    Array_gpu<Float,2> surface_down_diffuse_multiple_count({grid_cells.x, grid_cells.y});
     Array_gpu<Float,2> surface_up_count({grid_cells.x, grid_cells.y});
     Array_gpu<Float,3> atmos_direct_count({grid_cells.x, grid_cells.y, grid_cells.z});
     Array_gpu<Float,3> atmos_diffuse_count({grid_cells.x, grid_cells.y, grid_cells.z});
@@ -329,6 +338,8 @@ void Raytracer::trace_rays(
     Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.x, grid_cells.y, tod_up_count.ptr());
     Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.x, grid_cells.y, surface_down_direct_count.ptr());
     Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.x, grid_cells.y, surface_down_diffuse_count.ptr());
+    Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.x, grid_cells.y, surface_down_diffuse_single_count.ptr());
+    Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.x, grid_cells.y, surface_down_diffuse_multiple_count.ptr());
     Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.x, grid_cells.y, surface_up_count.ptr());
     Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.x, grid_cells.y, grid_cells.z, atmos_direct_count.ptr());
     Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.x, grid_cells.y, grid_cells.z, atmos_diffuse_count.ptr());
@@ -378,6 +389,7 @@ void Raytracer::trace_rays(
     const int qrng_gpt_offset = (igpt-1) * rt_kernel_grid_size * rt_kernel_block_size * photons_per_thread;
     ray_tracer_kernel<<<grid, block,sizeof(Float)*mie_table_size>>>(
             switch_independent_column,
+            switch_track_diffuse,
             photons_per_thread,
             qrng_grid_x,
             qrng_grid_y,
@@ -387,6 +399,8 @@ void Raytracer::trace_rays(
             tod_up_count.ptr(),
             surface_down_direct_count.ptr(),
             surface_down_diffuse_count.ptr(),
+            surface_down_diffuse_single_count.ptr(),
+            surface_down_diffuse_multiple_count.ptr(),
             surface_up_count.ptr(),
             atmos_direct_count.ptr(),
             atmos_diffuse_count.ptr(),
@@ -410,11 +424,15 @@ void Raytracer::trace_rays(
             tod_up_count.ptr(),
             surface_down_direct_count.ptr(),
             surface_down_diffuse_count.ptr(),
+            surface_down_diffuse_single_count.ptr(),
+            surface_down_diffuse_multiple_count.ptr(),
             surface_up_count.ptr(),
             flux_tod_dn.ptr(),
             flux_tod_up.ptr(),
             flux_sfc_dir.ptr(),
             flux_sfc_dif.ptr(),
+            flux_sfc_dif_single.ptr(),
+            flux_sfc_dif_multiple.ptr(),
             flux_sfc_up.ptr());
 
     count_to_flux_3d<<<grid_3d, block_3d>>>(

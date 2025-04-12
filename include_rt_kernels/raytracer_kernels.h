@@ -21,6 +21,7 @@ constexpr Float k_null_gas_min = Float(1.e-3);
 __global__
 void ray_tracer_kernel(
         const Bool independent_column,
+        const Bool track_diffuse,
         const Int photons_to_shoot,
         const Int qrng_grid_x,
         const Int qrng_grid_y,
@@ -30,6 +31,8 @@ void ray_tracer_kernel(
         Float* __restrict__ tod_up_count,
         Float* __restrict__ surface_down_direct_count,
         Float* __restrict__ surface_down_diffuse_count,
+        Float* __restrict__ surface_down_diffuse_single_count,
+        Float* __restrict__ surface_down_diffuse_multiple_count,
         Float* __restrict__ surface_up_count,
         Float* __restrict__ atmos_direct_count,
         Float* __restrict__ atmos_diffuse_count,

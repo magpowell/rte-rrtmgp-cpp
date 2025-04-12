@@ -85,6 +85,8 @@ class Fluxes_broadband_rt : public Fluxes_rt
         Array_gpu<Float,2>& get_flux_tod_up    () { return flux_tod_up; }
         Array_gpu<Float,2>& get_flux_sfc_dir   () { return flux_sfc_dir;}
         Array_gpu<Float,2>& get_flux_sfc_dif   () { return flux_sfc_dif;}
+        Array_gpu<Float,2>& get_flux_sfc_dif_single   () { return flux_sfc_dif_single;}
+        Array_gpu<Float,2>& get_flux_sfc_dif_multiple   () { return flux_sfc_dif_multiple;}
         Array_gpu<Float,2>& get_flux_sfc_up    () { return flux_sfc_up; }
         Array_gpu<Float,3>& get_flux_abs_dir   () { return flux_abs_dir;}
         Array_gpu<Float,3>& get_flux_abs_dif   () { return flux_abs_dif;}
@@ -104,6 +106,8 @@ class Fluxes_broadband_rt : public Fluxes_rt
         Array_gpu<Float,2> flux_tod_up;
         Array_gpu<Float,2> flux_sfc_dir;
         Array_gpu<Float,2> flux_sfc_dif;
+        Array_gpu<Float,2> flux_sfc_dif_single;
+        Array_gpu<Float,2> flux_sfc_dif_multiple;
         Array_gpu<Float,2> flux_sfc_up;
         Array_gpu<Float,3> flux_abs_dir;
         Array_gpu<Float,3> flux_abs_dif;

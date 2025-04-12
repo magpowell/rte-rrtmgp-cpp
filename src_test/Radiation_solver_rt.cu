@@ -42,6 +42,40 @@
 
 namespace
 {
+        __global__
+        void homogenize_tau_column_kernel(Float* tau, const int ncol, const int nlay) {
+            const int icol = blockIdx.x * blockDim.x + threadIdx.x;
+            if (icol >= ncol) return;
+        
+            Float tau_sum = 0.0;
+            int n_cloud = 0;
+            for (int ilay = 0; ilay < nlay; ++ilay) {
+                int idx = icol + ilay * ncol;
+                Float val = tau[idx];
+                if (val > 0.0) {
+                    tau_sum += val;
+                    n_cloud += 1;
+                }
+            }
+        
+            if (n_cloud == 0) return;
+            Float tau_const = tau_sum / n_cloud;
+
+            for (int ilay = 0; ilay < nlay; ++ilay) {
+                int idx = icol + ilay * ncol;
+                if (tau[idx] > 0.0) {
+                    tau[idx] = tau_const;
+                }
+            }
+        }
+        
+        void homogenize_tau(Float* tau, const int ncol, const int nlay) {
+            const int block_col = 64;
+            const int grid_col  = (ncol + block_col - 1) / block_col;
+        
+            homogenize_tau_column_kernel<<<grid_col, block_col>>>(tau, ncol, nlay);
+        }        
+
     std::vector<std::string> get_variable_string(
             const std::string& var_name,
             std::vector<int> i_count,
@@ -576,6 +610,8 @@ void Radiation_solver_shortwave::solve_gpu(
         const bool switch_single_gpt,
         const bool switch_delta_cloud,
         const bool switch_delta_aerosol,
+        const bool switch_track_diffuse,
+        const bool switch_const_clouds,
         const int single_gpt,
         const Int ray_count,
         const Vector<int> grid_cells,
@@ -602,6 +638,8 @@ void Radiation_solver_shortwave::solve_gpu(
         Array_gpu<Float,2>& rt_flux_tod_up,
         Array_gpu<Float,2>& rt_flux_sfc_dir,
         Array_gpu<Float,2>& rt_flux_sfc_dif,
+        Array_gpu<Float,2>& rt_flux_sfc_dif_single,
+        Array_gpu<Float,2>& rt_flux_sfc_dif_multiple,
         Array_gpu<Float,2>& rt_flux_sfc_up,
         Array_gpu<Float,3>& rt_flux_abs_dir,
         Array_gpu<Float,3>& rt_flux_abs_dif)
@@ -649,6 +687,8 @@ void Radiation_solver_shortwave::solve_gpu(
             Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.y, grid_cells.x, rt_flux_tod_up.ptr());
             Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.y, grid_cells.x, rt_flux_sfc_dir.ptr());
             Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.y, grid_cells.x, rt_flux_sfc_dif.ptr());
+            Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.y, grid_cells.x, rt_flux_sfc_dif_single.ptr());
+            Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.y, grid_cells.x, rt_flux_sfc_dif_multiple.ptr());
             Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.y, grid_cells.x, rt_flux_sfc_up.ptr());
             Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.z, grid_cells.y, grid_cells.x, rt_flux_abs_dir.ptr());
             Gas_optics_rrtmgp_kernels_cuda_rt::zero_array(grid_cells.z, grid_cells.y, grid_cells.x, rt_flux_abs_dif.ptr());
@@ -752,6 +792,10 @@ void Radiation_solver_shortwave::solve_gpu(
 
                 if (switch_delta_cloud)
                     cloud_optical_props->delta_scale();
+                if (switch_const_clouds)
+                {
+                        homogenize_tau(dynamic_cast<Optical_props_2str_rt&>(*cloud_optical_props).get_tau().ptr(), n_col, n_lay);
+                }
             }
             // Add the cloud optical props to the gas optical properties.
             add_to(
@@ -814,6 +858,7 @@ void Radiation_solver_shortwave::solve_gpu(
                 raytracer.trace_rays(
                         igpt,
                         switch_independent_column,
+                        switch_track_diffuse,
                         ray_count,
                         grid_cells,
                         grid_d,
@@ -838,6 +883,8 @@ void Radiation_solver_shortwave::solve_gpu(
                         (*fluxes).get_flux_tod_up(),
                         (*fluxes).get_flux_sfc_dir(),
                         (*fluxes).get_flux_sfc_dif(),
+                        (*fluxes).get_flux_sfc_dif_single(),
+                        (*fluxes).get_flux_sfc_dif_multiple(),
                         (*fluxes).get_flux_sfc_up(),
                         (*fluxes).get_flux_abs_dir(),
                         (*fluxes).get_flux_abs_dif());
@@ -854,7 +901,9 @@ void Radiation_solver_shortwave::solve_gpu(
             if (switch_raytracing)
             {
                 Gpt_combine_kernels_cuda_rt::add_from_gpoint(
-                        grid_cells.x, grid_cells.y, rt_flux_tod_up.ptr(), rt_flux_sfc_dir.ptr(), rt_flux_sfc_dif.ptr(), rt_flux_sfc_up.ptr(),
+                        grid_cells.x, grid_cells.y, rt_flux_tod_up.ptr(), rt_flux_sfc_dir.ptr(), rt_flux_sfc_dif.ptr(), 
+                        rt_flux_sfc_dif_single.ptr(), rt_flux_sfc_dif_multiple.ptr(), 
+                        rt_flux_sfc_up.ptr(),
                         (*fluxes).get_flux_tod_up().ptr(), (*fluxes).get_flux_sfc_dir().ptr(), (*fluxes).get_flux_sfc_dif().ptr(), (*fluxes).get_flux_sfc_up().ptr());
 
                 Gpt_combine_kernels_cuda_rt::add_from_gpoint(

@@ -238,11 +238,17 @@ void solve_radiation(int argc, char** argv)
         {"single-gpt"        , { false, "Output optical properties and fluxes for a single g-point. '--single-gpt 100': output 100th g-point" }},
         {"profiling"         , { false, "Perform additional profiling run."         }},
         {"delta-cloud"       , { false, "delta-scaling of cloud optical properties"   }},
-        {"delta-aerosol"     , { false, "delta-scaling of aerosol optical properties"   }}};
+        {"delta-aerosol"     , { false, "delta-scaling of aerosol optical properties"   }},
+        {"track-diffuse"     , { false, "track single vs multi scattering"   }},
+        {"const-clouds"      , { false, "constant clouds for tests"   }},
+        {"override-sza"     , { false, "override provided value of sza in input file. IN DEGREES. '--override-sza 50': use a sza of 50 degrees" }},
+        {"override-azi"     , { false, "override provided value of azi in input file. IN DEGREES. '--override-azi 240': use of azi of 240 degrees"   }}}; 
 
-    std::map<std::string, std::pair<int, std::string>> command_line_ints {
-        {"raytracing", {32, "Number of rays initialised at TOD per pixel per quadraute."}},
-        {"single-gpt", {1 , "g-point to store optical properties and fluxes of" }}};
+        std::map<std::string, std::pair<int, std::string>> command_line_ints {
+            {"raytracing", {32, "Number of rays initialised at TOD per pixel per quadraute."}},
+            {"single-gpt", {1 , "g-point to store optical properties and fluxes of" }},
+            {"override-sza", {0, "solar zenith angle (theta) in degrees."}},
+            {"override-azi", {0, "Solar azimuth angle in degrees."}} };
 
     if (parse_command_line_options(command_line_switches, command_line_ints, argc, argv))
         return;
@@ -262,6 +268,10 @@ void solve_radiation(int argc, char** argv)
     const bool switch_profiling         = command_line_switches.at("profiling"         ).first;
     const bool switch_delta_cloud       = command_line_switches.at("delta-cloud"       ).first;
     const bool switch_delta_aerosol     = command_line_switches.at("delta-aerosol"     ).first;
+    const bool switch_track_diffuse     = command_line_switches.at("track-diffuse"     ).first;
+    const bool switch_const_clouds      = command_line_switches.at("const-clouds"     ).first;
+    const bool override_sza             = command_line_switches.at("override-sza"    ).first;
+    const bool override_azi             = command_line_switches.at("override-azi"    ).first;
 
     Int photons_per_pixel = Int(command_line_ints.at("raytracing").first);
     if (Float(int(std::log2(Float(photons_per_pixel)))) != std::log2(Float(photons_per_pixel)))
@@ -295,8 +305,19 @@ void solve_radiation(int argc, char** argv)
     print_command_line_options(command_line_switches, command_line_ints);
 
     int single_gpt = command_line_ints.at("single-gpt").first;
+    int sza_deg = Int(command_line_ints.at("override-sza").first);
+    int azi_deg = Int(command_line_ints.at("override-azi").first);
 
     Status::print_message("Using "+ std::to_string(photons_per_pixel) + " rays per pixel");
+    if (override_sza) 
+    {
+        Status::print_message("Using SZA of "+ std::to_string(sza_deg) + " degrees");
+    }
+
+    if (override_azi) 
+    {
+        Status::print_message("Using azi of "+ std::to_string(azi_deg) + " degrees");
+    }
 
     ////// READ THE ATMOSPHERIC DATA //////
     Status::print_message("Reading atmospheric input data from NetCDF.");
@@ -666,8 +687,24 @@ void solve_radiation(int argc, char** argv)
             rad_sw.load_mie_tables("mie_lut_broadband.nc");
         }
 
-        Array<Float,1> mu0(input_nc.get_variable<Float>("mu0", {n_col_y, n_col_x}), {n_col});
-        Array<Float,1> azi(input_nc.get_variable<Float>("azi", {n_col_y, n_col_x}), {n_col});
+        Array<Float,1> mu0({n_col});
+        Array<Float,1> azi({n_col});
+
+        if (override_sza) {
+            Float mu0_in = cosf(sza_deg * 3.14159f / 180.0f);
+            for (int icol=1; icol<=n_col; ++icol)
+                mu0({icol}) = mu0_in;
+        } else {
+            mu0 = input_nc.get_variable<Float>("mu0", {n_col_y, n_col_x});
+        }
+
+        if (override_azi) {
+            Float azi_in = azi_deg * 3.14159f / 180.0f;
+            for (int icol=1; icol<=n_col; ++icol)
+                azi({icol}) = azi_in;
+        } else {
+            azi = input_nc.get_variable<Float>("azi", {n_col_y, n_col_x});
+        }
 
         Array<Float,2> sfc_alb_dir(input_nc.get_variable<Float>("sfc_alb_dir", {n_col_y, n_col_x, n_bnd_sw}), {n_bnd_sw, n_col});
         Array<Float,2> sfc_alb_dif(input_nc.get_variable<Float>("sfc_alb_dif", {n_col_y, n_col_x, n_bnd_sw}), {n_bnd_sw, n_col});
@@ -722,6 +759,8 @@ void solve_radiation(int argc, char** argv)
         Array_gpu<Float,2> rt_flux_tod_up;
         Array_gpu<Float,2> rt_flux_sfc_dir;
         Array_gpu<Float,2> rt_flux_sfc_dif;
+        Array_gpu<Float,2> rt_flux_sfc_dif_single;
+        Array_gpu<Float,2> rt_flux_sfc_dif_multiple;
         Array_gpu<Float,2> rt_flux_sfc_up;
         Array_gpu<Float,3> rt_flux_abs_dir;
         Array_gpu<Float,3> rt_flux_abs_dif;
@@ -742,6 +781,8 @@ void solve_radiation(int argc, char** argv)
                 rt_flux_tod_up .set_dims({n_col_x, n_col_y});
                 rt_flux_sfc_dir.set_dims({n_col_x, n_col_y});
                 rt_flux_sfc_dif.set_dims({n_col_x, n_col_y});
+                rt_flux_sfc_dif_single.set_dims({n_col_x, n_col_y});
+                rt_flux_sfc_dif_multiple.set_dims({n_col_x, n_col_y});
                 rt_flux_sfc_up .set_dims({n_col_x, n_col_y});
                 rt_flux_abs_dir.set_dims({n_col_x, n_col_y, n_z});
                 rt_flux_abs_dif.set_dims({n_col_x, n_col_y, n_z});
@@ -805,6 +846,8 @@ void solve_radiation(int argc, char** argv)
                     switch_single_gpt,
                     switch_delta_cloud,
                     switch_delta_aerosol,
+                    switch_track_diffuse,
+                    switch_const_clouds,
                     single_gpt,
                     photons_per_pixel,
                     grid_cells,
@@ -830,6 +873,8 @@ void solve_radiation(int argc, char** argv)
                     rt_flux_tod_up,
                     rt_flux_sfc_dir,
                     rt_flux_sfc_dif,
+                    rt_flux_sfc_dif_single,
+                    rt_flux_sfc_dif_multiple,
                     rt_flux_sfc_up,
                     rt_flux_abs_dir,
                     rt_flux_abs_dif);
@@ -879,6 +924,8 @@ void solve_radiation(int argc, char** argv)
         Array<Float,2> rt_flux_tod_up_cpu(rt_flux_tod_up);
         Array<Float,2> rt_flux_sfc_dir_cpu(rt_flux_sfc_dir);
         Array<Float,2> rt_flux_sfc_dif_cpu(rt_flux_sfc_dif);
+        Array<Float,2> rt_flux_sfc_dif_single_cpu(rt_flux_sfc_dif_single);
+        Array<Float,2> rt_flux_sfc_dif_multiple_cpu(rt_flux_sfc_dif_multiple);
         Array<Float,2> rt_flux_sfc_up_cpu(rt_flux_sfc_up);
         Array<Float,3> rt_flux_abs_dir_cpu(rt_flux_abs_dir);
         Array<Float,3> rt_flux_abs_dif_cpu(rt_flux_abs_dif);
@@ -965,6 +1012,8 @@ void solve_radiation(int argc, char** argv)
                 auto nc_rt_flux_tod_up  = output_nc.add_variable<Float>("rt_flux_tod_up",  {"y","x"});
                 auto nc_rt_flux_sfc_dir = output_nc.add_variable<Float>("rt_flux_sfc_dir", {"y","x"});
                 auto nc_rt_flux_sfc_dif = output_nc.add_variable<Float>("rt_flux_sfc_dif", {"y","x"});
+                auto nc_rt_flux_sfc_dif_single = output_nc.add_variable<Float>("rt_flux_sfc_dif_single", {"y","x"});
+                auto nc_rt_flux_sfc_dif_multiple = output_nc.add_variable<Float>("rt_flux_sfc_dif_multiple", {"y","x"});
                 auto nc_rt_flux_sfc_up  = output_nc.add_variable<Float>("rt_flux_sfc_up",  {"y","x"});
                 auto nc_rt_flux_abs_dir = output_nc.add_variable<Float>("rt_flux_abs_dir", {"z","y","x"});
                 auto nc_rt_flux_abs_dif = output_nc.add_variable<Float>("rt_flux_abs_dif", {"z","y","x"});
@@ -972,6 +1021,8 @@ void solve_radiation(int argc, char** argv)
                 nc_rt_flux_tod_up .insert(rt_flux_tod_up_cpu .v(), {0,0});
                 nc_rt_flux_sfc_dir.insert(rt_flux_sfc_dir_cpu.v(), {0,0});
                 nc_rt_flux_sfc_dif.insert(rt_flux_sfc_dif_cpu.v(), {0,0});
+                nc_rt_flux_sfc_dif_single.insert(rt_flux_sfc_dif_single_cpu.v(), {0,0});
+                nc_rt_flux_sfc_dif_multiple.insert(rt_flux_sfc_dif_multiple_cpu.v(), {0,0});
                 nc_rt_flux_sfc_up .insert(rt_flux_sfc_up_cpu .v(), {0,0});
 
                 nc_rt_flux_abs_dir.insert(rt_flux_abs_dir_cpu.v(), {0,0,0});
@@ -985,6 +1036,12 @@ void solve_radiation(int argc, char** argv)
 
                 nc_rt_flux_sfc_dif.add_attribute("long_name","Downwelling diffuse shortwave surface fluxes (Monte Carlo ray tracer)");
                 nc_rt_flux_sfc_dif.add_attribute("units","W m-2");
+
+                nc_rt_flux_sfc_dif_single.add_attribute("long_name","Downwelling diffuse shortwave surface fluxes from single scattering (Monte Carlo ray tracer)");
+                nc_rt_flux_sfc_dif_single.add_attribute("units","W m-2");
+
+                nc_rt_flux_sfc_dif_multiple.add_attribute("long_name","Downwelling diffuse shortwave surface fluxes from multiple scattering (Monte Carlo ray tracer)");
+                nc_rt_flux_sfc_dif_multiple.add_attribute("units","W m-2");
 
                 nc_rt_flux_sfc_up.add_attribute("long_name","Upwelling shortwave surface fluxes (Monte Carlo ray tracer)");
                 nc_rt_flux_sfc_up.add_attribute("units","W m-2");

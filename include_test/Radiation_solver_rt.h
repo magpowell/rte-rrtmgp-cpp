@@ -108,6 +108,8 @@ class Radiation_solver_shortwave
                 const bool switch_single_gpt,
                 const bool switch_delta_cloud,
                 const bool switch_delta_aerosol,
+                const bool switch_track_diffuse,
+                const bool switch_const_clouds,
                 const int single_gpt,
                 const Int ray_count,
                 const Vector<int> grid_cells,
@@ -134,6 +136,8 @@ class Radiation_solver_shortwave
                 Array_gpu<Float,2>& rt_flux_tod_up,
                 Array_gpu<Float,2>& rt_flux_sfc_dir,
                 Array_gpu<Float,2>& rt_flux_sfc_dif,
+                Array_gpu<Float,2>& rt_flux_sfc_dif_single,
+                Array_gpu<Float,2>& rt_flux_sfc_dif_multiple,
                 Array_gpu<Float,2>& rt_flux_sfc_up,
                 Array_gpu<Float,3>& rt_flux_abs_dir,
                 Array_gpu<Float,3>& rt_flux_abs_dif);

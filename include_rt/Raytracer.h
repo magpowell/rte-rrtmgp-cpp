@@ -24,6 +24,7 @@ class Raytracer
         void trace_rays(
                 const int qrng_gpt_offset,
                 const bool switch_independent_column,
+                const bool switch_track_diffuse,
                 const Int photons_per_pixel,
                 const Raytracer_definitions::Vector<int> grid_cells,
                 const Raytracer_definitions::Vector<Float> grid_d,
@@ -48,6 +49,8 @@ class Raytracer
                 Array_gpu<Float,2>& flux_tod_up,
                 Array_gpu<Float,2>& flux_sfc_dir,
                 Array_gpu<Float,2>& flux_sfc_dif,
+                Array_gpu<Float,2>& flux_sfc_dif_single,
+                Array_gpu<Float,2>& flux_sfc_dif_mult,
                 Array_gpu<Float,2>& flux_sfc_up,
                 Array_gpu<Float,3>& flux_abs_dir,
                 Array_gpu<Float,3>& flux_abs_dif);
