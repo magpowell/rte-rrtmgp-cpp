@@ -251,16 +251,16 @@ void ray_tracer_kernel(
                 // // Add surface irradiance
                 if (photon.kind == Photon_kind::Direct)
                     write_photon_out(&surface_down_direct_count[ij], weight);
-                else if (photon.kind == Photon_kind::Diffuse)
+                else if (photon.kind == Photon_kind::Diffuse) {
                     write_photon_out(&surface_down_diffuse_count[ij], weight);
-                if (track_diffuse) {
-                    if (photon.diffuse_kind == Diffuse_kind::Single) {
-                        write_photon_out(&surface_down_diffuse_single_count[ij], weight);
-                    } else if (photon.diffuse_kind == Diffuse_kind::Multiple) {
-                        write_photon_out(&surface_down_diffuse_multiple_count[ij], weight);
+                    if (track_diffuse) {
+                        if (photon.diffuse_kind == Diffuse_kind::Single) {
+                            write_photon_out(&surface_down_diffuse_single_count[ij], weight);
+                        } else if (photon.diffuse_kind == Diffuse_kind::Multiple) {
+                            write_photon_out(&surface_down_diffuse_multiple_count[ij], weight);
+                        }
                     }
                 }
-                
 
                 // if (from_solar_cone(sun_direction, photon.direction))
                 //     write_photon_out(&surface_down_direct_count[ij], weight);
