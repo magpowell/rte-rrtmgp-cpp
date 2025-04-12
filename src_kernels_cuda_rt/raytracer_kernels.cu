@@ -81,7 +81,7 @@ namespace
             {
                 photon.direction = sun_direction;
                 photon.kind = Photon_kind::Direct;
-                photon.diffuse_kind = Diffuse_kind::None;
+                photon.first_scatter_recorded = false;
             }
             else
             {
@@ -93,6 +93,7 @@ namespace
                 photon.direction.z = Float(-1) * (sqrt(Float(1.) - mu_surface*mu_surface + Float_epsilon));
                 photon.kind = Photon_kind::Diffuse;
                 photon.diffuse_kind = Diffuse_kind::Single;
+                photon.first_scatter_recorded = true;
             }
 
             const int ij = i + j*grid_cells.x;
@@ -252,11 +253,14 @@ void ray_tracer_kernel(
                     write_photon_out(&surface_down_direct_count[ij], weight);
                 else if (photon.kind == Photon_kind::Diffuse)
                     write_photon_out(&surface_down_diffuse_count[ij], weight);
+                if (track_diffuse) {
+                    if (photon.diffuse_kind == Diffuse_kind::Single) {
+                        write_photon_out(&surface_down_diffuse_single_count[ij], weight);
+                    } else if (photon.diffuse_kind == Diffuse_kind::Multiple) {
+                        write_photon_out(&surface_down_diffuse_multiple_count[ij], weight);
+                    }
+                }
                 
-                if (photon.diffuse_kind == Diffuse_kind::Single)
-                    write_photon_out(&surface_down_diffuse_single_count[ij], weight);
-                else if (photon.diffuse_kind == Diffuse_kind::Multiple)
-                    write_photon_out(&surface_down_diffuse_multiple_count[ij], weight);
 
                 // if (from_solar_cone(sun_direction, photon.direction))
                 //     write_photon_out(&surface_down_direct_count[ij], weight);
@@ -281,6 +285,15 @@ void ray_tracer_kernel(
                     photon.direction.y = mu_surface*cos(azimuth_surface);
                     photon.direction.z = sqrt(Float(1.) - mu_surface*mu_surface + Float_epsilon);
                     photon.kind = Photon_kind::Diffuse;
+                    if (!photon.first_scatter_recorded)
+                    {
+                        photon.first_scatter_recorded = true;
+                        photon.diffuse_kind = Diffuse_kind::Single;
+                    }
+                    else
+                    {
+                        photon.diffuse_kind = Diffuse_kind::Multiple;
+                    }
                 }
                 else
                 {
@@ -449,12 +462,14 @@ void ray_tracer_kernel(
 
                     photon.kind = Photon_kind::Diffuse;
 
-                    if (track_diffuse){
-                        if (photon.diffuse_kind == Diffuse_kind::None) {
-                            photon.diffuse_kind = Diffuse_kind::Single;
-                        } else {
-                            photon.diffuse_kind = Diffuse_kind::Multiple;
-                        }  
+                    if (!photon.first_scatter_recorded)
+                    {
+                        photon.first_scatter_recorded = true;
+                        photon.diffuse_kind = Diffuse_kind::Single;
+                    }
+                    else
+                    {
+                        photon.diffuse_kind = Diffuse_kind::Multiple;
                     }
                 }
             }

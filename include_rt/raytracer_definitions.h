@@ -24,7 +24,7 @@ namespace Raytracer_definitions
     };
 
     enum class Photon_kind { Direct, Diffuse };
-    enum class Diffuse_kind { None, Single, Multiple };
+    enum class Diffuse_kind { Single, Multiple };
 
     struct Photon
     {
@@ -32,6 +32,7 @@ namespace Raytracer_definitions
         Vector<Float>direction;
         Photon_kind kind;
         Diffuse_kind diffuse_kind;
+        bool first_scatter_recorded;
     };
 }
 #endif
