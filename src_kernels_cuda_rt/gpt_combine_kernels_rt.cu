@@ -14,9 +14,9 @@ void get_from_gpoint_kernel(const int ncol, const int igpt, Float* __restrict__ 
 __global__
 void add_from_gpoint_kernel(const int ncol, const int nlay,
               Float* __restrict__ var1_full, Float* __restrict__ var2_full, Float* __restrict__ var3_full,  Float* __restrict__ var4_full, Float* __restrict__ var5_full,
-              Float* __restrict__ var6_full, Float* __restrict__ var7_full,
+              Float* __restrict__ var6_full,
               const Float* __restrict__ var1_sub, const Float* __restrict__ var2_sub, const Float* __restrict__ var3_sub, const Float* __restrict__ var4_sub, const Float* __restrict__ var5_sub,
-              const Float* __restrict__ var6_sub, const Float* __restrict__ var7_sub)
+              const Float* __restrict__ var6_sub)
 {
     const int icol = blockIdx.x*blockDim.x + threadIdx.x;
     const int ilay = blockIdx.y*blockDim.y + threadIdx.y;
@@ -30,7 +30,6 @@ void add_from_gpoint_kernel(const int ncol, const int nlay,
         var4_full[idx] += var4_sub[idx];
         var5_full[idx] += var5_sub[idx];
         var6_full[idx] += var6_sub[idx];
-        var7_full[idx] += var7_sub[idx];
     }
 }
 

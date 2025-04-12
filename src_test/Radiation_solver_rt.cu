@@ -901,10 +901,13 @@ void Radiation_solver_shortwave::solve_gpu(
             if (switch_raytracing)
             {
                 Gpt_combine_kernels_cuda_rt::add_from_gpoint(
-                        grid_cells.x, grid_cells.y, rt_flux_tod_up.ptr(), rt_flux_sfc_dir.ptr(), rt_flux_sfc_dif.ptr(), 
+                        grid_cells.x, grid_cells.y, 
+                        rt_flux_tod_up.ptr(), rt_flux_sfc_dir.ptr(), rt_flux_sfc_dif.ptr(), 
                         rt_flux_sfc_dif_single.ptr(), rt_flux_sfc_dif_multiple.ptr(), 
                         rt_flux_sfc_up.ptr(),
-                        (*fluxes).get_flux_tod_up().ptr(), (*fluxes).get_flux_sfc_dir().ptr(), (*fluxes).get_flux_sfc_dif().ptr(), (*fluxes).get_flux_sfc_up().ptr());
+                        (*fluxes).get_flux_tod_up().ptr(), (*fluxes).get_flux_sfc_dir().ptr(), (*fluxes).get_flux_sfc_dif().ptr(), 
+                        (*fluxes).get_flux_sfc_dif_single().ptr(), (*fluxes).get_flux_sfc_dif_multiple().ptr(), 
+                        (*fluxes).get_flux_sfc_up().ptr());
 
                 Gpt_combine_kernels_cuda_rt::add_from_gpoint(
                         n_col, grid_cells.z, rt_flux_abs_dir.ptr(), rt_flux_abs_dif.ptr(),

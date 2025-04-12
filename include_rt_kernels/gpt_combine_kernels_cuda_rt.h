@@ -36,6 +36,12 @@ namespace Gpt_combine_kernels_cuda_rt
                   Float* var_full, const Float* var_sub);
 
     void add_from_gpoint(const int ncol, const int nlay,
+                Float* var1_full, Float* var2_full, Float* var3_full,  Float* var4_full, 
+                Float* var5_full, Float* var6_full, 
+                const Float* var1_sub, const Float* var2_sub, const Float* var3_sub, const Float* var4_sub, 
+                const Float* var5_sub , const Float* var6_sub);
+
+    void add_from_gpoint(const int ncol, const int nlay,
                   Float* var1_full, Float* var2_full, Float* var3_full,  Float* var4_full, Float* var5_full,
                   const Float* var1_sub, const Float* var2_sub, const Float* var3_sub, const Float* var4_sub, const Float* var5_sub);
 
