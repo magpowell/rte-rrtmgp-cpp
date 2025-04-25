@@ -240,7 +240,8 @@ void solve_radiation(int argc, char** argv)
         {"profiling"         , { false, "Perform additional profiling run."         }},
         {"delta-cloud"       , { false, "delta-scaling of cloud optical properties"   }},
         {"delta-aerosol"     , { false, "delta-scaling of aerosol optical properties"   }},
-        {"tica"              , { false, "attenuate path when doing an overhead 1D calculation of tilted input"   }}};
+        {"tica"              , { false, "attenuate path when doing an overhead 1D calculation of tilted input"   }},
+        {"hybrid"            , { false, "direct flux exact, diffuse 1D in z."   }}};
 
     std::map<std::string, std::pair<int, std::string>> command_line_ints {
         {"raytracing", {32, "Number of rays initialised at TOD per pixel per quadraute."}},
@@ -265,6 +266,7 @@ void solve_radiation(int argc, char** argv)
     const bool switch_delta_cloud       = command_line_switches.at("delta-cloud"       ).first;
     const bool switch_delta_aerosol     = command_line_switches.at("delta-aerosol"     ).first;
     const bool switch_tica              = command_line_switches.at("tica"     ).first;
+    const bool switch_hybrid            = command_line_switches.at("hybrid"     ).first;
 
     Int photons_per_pixel = Int(command_line_ints.at("raytracing").first);
 
@@ -935,6 +937,7 @@ void solve_radiation(int argc, char** argv)
                     switch_twostream,
                     switch_raytracing,
                     switch_independent_column,
+                    switch_hybrid,
                     switch_cloud_optics,
                     switch_cloud_mie,
                     switch_aerosol_optics,

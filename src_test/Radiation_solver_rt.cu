@@ -593,6 +593,7 @@ void Radiation_solver_shortwave::solve_gpu(
         const bool switch_twostream,
         const bool switch_raytracing,
         const bool switch_independent_column,
+        const bool switch_hybrid,
         const bool switch_cloud_optics,
         const bool switch_cloud_mie,
         const bool switch_aerosol_optics,
@@ -851,6 +852,7 @@ void Radiation_solver_shortwave::solve_gpu(
                 raytracer.trace_rays(
                         igpt,
                         switch_independent_column,
+                        switch_hybrid,
                         ray_count,
                         grid_cells,
                         grid_d,
