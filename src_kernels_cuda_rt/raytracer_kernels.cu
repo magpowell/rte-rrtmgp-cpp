@@ -419,6 +419,7 @@ void ray_tracer_kernel(
                                                                     ? cos( mie_sample_angle(mie_cdf_shared, mie_ang, rng(), r_eff[ijk], mie_table_size) )
                                                                     :  henyey(g, rng()))
                                                            : henyey(g, rng()); //aerosols
+
                     const Float sin_scat = max(Float(0.), sqrt(Float(1.) - cos_scat*cos_scat + Float_epsilon));
 
                     Vector<Float> t1{Float(0.), Float(0.), Float(0.)};
@@ -445,6 +446,7 @@ void ray_tracer_kernel(
                             + sin_scat*(sin(phi)*t1 + cos(phi)*t2);
 
                     photon.kind = Photon_kind::Diffuse;
+                                                        
                 }
             }
             else
