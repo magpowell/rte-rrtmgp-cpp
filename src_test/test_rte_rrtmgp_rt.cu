@@ -240,11 +240,15 @@ void solve_radiation(int argc, char** argv)
         {"profiling"         , { false, "Perform additional profiling run."         }},
         {"delta-cloud"       , { false, "delta-scaling of cloud optical properties"   }},
         {"delta-aerosol"     , { false, "delta-scaling of aerosol optical properties"   }},
-        {"tica"              , { false, "attenuate path when doing an overhead 1D calculation of tilted input"   }}};
+        {"tica"              , { false, "attenuate path when doing an overhead 1D calculation of tilted input"   }},
+        {"override-sza"     , { false, "override provided value of sza in input file. IN DEGREES. '--override-sza 50': use a sza of 50 degrees" }},
+        {"override-azi"     , { false, "override provided value of azi in input file. IN DEGREES. '--override-azi 240': use of azi of 240 degrees"   }}}; 
 
     std::map<std::string, std::pair<int, std::string>> command_line_ints {
         {"raytracing", {32, "Number of rays initialised at TOD per pixel per quadraute."}},
-        {"single-gpt", {1 , "g-point to store optical properties and fluxes of" }}};
+        {"single-gpt", {1 , "g-point to store optical properties and fluxes of" }},
+        {"override-sza", {0, "sza degrees."}},
+        {"override-azi", {0, "azi degrees."}},};
 
     if (parse_command_line_options(command_line_switches, command_line_ints, argc, argv))
         return;
@@ -265,6 +269,8 @@ void solve_radiation(int argc, char** argv)
     const bool switch_delta_cloud       = command_line_switches.at("delta-cloud"       ).first;
     const bool switch_delta_aerosol     = command_line_switches.at("delta-aerosol"     ).first;
     const bool switch_tica              = command_line_switches.at("tica"     ).first;
+    const bool switch_override_sza             = command_line_switches.at("override-sza"    ).first;
+    const bool switch_override_azi             = command_line_switches.at("override-azi"    ).first;
 
     Int photons_per_pixel = Int(command_line_ints.at("raytracing").first);
 
@@ -309,6 +315,19 @@ void solve_radiation(int argc, char** argv)
     print_command_line_options(command_line_switches, command_line_ints);
 
     int single_gpt = command_line_ints.at("single-gpt").first;
+    int sza_deg = Int(command_line_ints.at("override-sza").first);
+    int azi_deg = Int(command_line_ints.at("override-azi").first);
+
+    Status::print_message("Using "+ std::to_string(photons_per_pixel) + " rays per pixel");
+    if (switch_override_sza) 
+    {
+        Status::print_message("Using SZA of "+ std::to_string(sza_deg) + " degrees");
+    }
+
+    if (switch_override_azi) 
+    {
+        Status::print_message("Using azi of "+ std::to_string(azi_deg) + " degrees");
+    }
 
     Status::print_message("Using "+ std::to_string(photons_per_pixel) + " rays per pixel");
 
@@ -451,8 +470,23 @@ void solve_radiation(int argc, char** argv)
     Float tica_sza;
     Float tica_azi;
 
-    mu0 = input_nc.get_variable<Float>("mu0", {n_col_y, n_col_x});
-    azi = input_nc.get_variable<Float>("azi", {n_col_y, n_col_x});
+    if (switch_override_sza) 
+    { 
+        Float mu0_in = cosf(sza_deg * 3.14159f / 180.0f);
+        for (int icol=1; icol<=n_col; ++icol)
+            mu0({icol}) = mu0_in;
+    } else {
+        mu0 = input_nc.get_variable<Float>("mu0", {n_col_y, n_col_x});
+    }
+
+    if (switch_override_azi) 
+    { 
+        Float azi_in = azi_deg * 3.14159f / 180.0f;
+        for (int icol=1; icol<=n_col; ++icol)
+            azi({icol}) = azi_in;
+    } else {
+        azi = input_nc.get_variable<Float>("azi", {n_col_y, n_col_x});
+    }
 
     
     if (switch_tica)
