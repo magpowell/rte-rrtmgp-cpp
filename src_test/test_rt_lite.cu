@@ -176,6 +176,51 @@ void solve_radiation(int argc, char** argv)
     const int ngrid_z = input_nc.get_variable<Float>("ngrid_z");
     const Vector<int> kn_grid = {ngrid_x, ngrid_y, ngrid_z};
 
+    Array<Float,1> z_lev({nz+1});
+    if (input_nc.variable_exists("zh"))
+    {
+        z_lev = std::move(input_nc.get_variable<Float>("zh", {nz+1}));
+    }
+    else
+    {
+        for (int k=0; k<nz+1; ++k)
+            z_lev({k+1}) = k*dz;
+    }
+
+    Array<Float,1> kn_z_lev({ngrid_z+1});
+    const Float fz = Float(nz) / Float(ngrid_z);
+    for (int k=0; k<ngrid_z; ++k)
+        kn_z_lev({k+1}) = z_lev({static_cast<int>(k*fz)+1});
+    kn_z_lev({ngrid_z+1}) = z_lev({nz+1});
+
+    Float dz_min = z_lev({2}) - z_lev({1});
+    for (int k=1; k<nz; ++k)
+        dz_min = std::min(dz_min, z_lev({k+2}) - z_lev({k+1}));
+
+    const Float zsize = z_lev({nz+1});
+    const int lut_size = static_cast<int>(std::ceil(zsize/dz_min));
+    const Float lut_dz = zsize / lut_size;
+
+    Array<int,1> z_lut({lut_size});
+    Array<int,1> kn_z_lut({lut_size});
+    for (int n=0; n<lut_size; ++n)
+    {
+        const Float z = n*lut_dz;
+        int k = 0;
+        while (k < nz-1 && z >= z_lev({k+2}))
+            ++k;
+        z_lut({n+1}) = k;
+        k = 0;
+        while (k < ngrid_z-1 && z >= kn_z_lev({k+2}))
+            ++k;
+        kn_z_lut({n+1}) = k;
+    }
+
+    Array_gpu<Float,1> z_lev_g(z_lev);
+    Array_gpu<Float,1> kn_z_lev_g(kn_z_lev);
+    Array_gpu<int,1> z_lut_g(z_lut);
+    Array_gpu<int,1> kn_z_lut_g(kn_z_lut);
+
     // Read the atmospheric fields.
     const Array<Float,2> tot_tau(input_nc.get_variable<Float>("tot_tau", {nz, ny, nx}), {ncol, nz});
     const Array<Float,2> tot_ssa(input_nc.get_variable<Float>("tot_ssa", {nz, ny, nx}), {ncol, nz});
@@ -261,6 +306,12 @@ void solve_radiation(int argc, char** argv)
                grid_cells,
                grid_d,
                kn_grid,
+               z_lev_g,
+               kn_z_lev_g,
+               z_lut_g,
+               kn_z_lut_g,
+               lut_dz,
+               zsize,
                mie_cdfs_sub,
                mie_angs_sub,
                tot_tau_g,
